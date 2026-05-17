@@ -1,8 +1,8 @@
-# Triton Installers
+# Triton Manage Server Installer
 
-Production installers for Triton server components. Container-based (Docker or Podman), idempotent — safe to re-run.
+Production installer for the Triton Manage Server. Container-based (Docker or Podman), idempotent — safe to re-run.
 
-## Manage Server
+## Install
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/primatekuntech/triton-install/main/manage-server/install.sh | sudo bash -s -- \
@@ -11,6 +11,8 @@ curl -fsSL https://raw.githubusercontent.com/primatekuntech/triton-install/main/
   --gateway-hostname      manage.customer.com
 ```
 
+## Flags
+
 | Flag | Description |
 |------|-------------|
 | `--license-server-pubkey` | Ed25519 public key (64 hex chars). **Required.** |
@@ -18,20 +20,6 @@ curl -fsSL https://raw.githubusercontent.com/primatekuntech/triton-install/main/
 | `--license-token` | Pre-fill activation token (else use setup wizard). |
 | `--gateway-hostname` | Agent mTLS hostname (defaults to current FQDN). |
 | `--manage-host-ip` | Host LAN IP for "+ This machine". |
-| `--image` | Pin a specific image tag. |
-| `--no-tls` | Skip TLS check (dev only). |
-
-## License Server
-
-```bash
-curl -fsSL https://raw.githubusercontent.com/primatekuntech/triton-install/main/license-server/install.sh | sudo bash -s -- \
-  --admin-email admin@yourcompany.com
-```
-
-| Flag | Description |
-|------|-------------|
-| `--admin-email` | Initial superadmin email. |
-| `--public-url` | Public URL of the license server. |
 | `--image` | Pin a specific image tag. |
 | `--no-tls` | Skip TLS check (dev only). |
 
