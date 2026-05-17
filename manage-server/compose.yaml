@@ -1,0 +1,75 @@
+# Triton Manage Server — standalone compose file.
+#
+# Self-contained: bundles its own PostgreSQL for both the manage schema
+# and the AES-256-GCM credential vault. Designed to run on a host that
+# only hosts the manage server.
+#
+# Reads .env from the same directory (this file's parent).
+
+services:
+
+  postgres:
+    image: docker.io/library/postgres:18-alpine
+    container_name: triton-manage-db
+    hostname: triton-manage-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-triton}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB:-triton_manage}
+    volumes:
+      - triton-manage-db-data:/var/lib/postgresql
+    ports:
+      - "127.0.0.1:${POSTGRES_PORT:-5435}:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-triton} -d ${POSTGRES_DB:-triton_manage}"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  manage-server:
+    image: ${TRITON_MANAGE_IMAGE:-ghcr.io/amiryahaya/triton-manageserver:latest}
+    container_name: triton-manageserver
+    hostname: triton-manageserver
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      # Required
+      TRITON_MANAGE_DB_URL: postgres://${POSTGRES_USER:-triton}:${POSTGRES_PASSWORD}@triton-manage-db:5432/${POSTGRES_DB:-triton_manage}?sslmode=disable
+      TRITON_MANAGE_JWT_SIGNING_KEY: ${TRITON_MANAGE_JWT_SIGNING_KEY}
+      TRITON_MANAGE_LICENSE_SERVER_PUBKEY: ${TRITON_MANAGE_LICENSE_SERVER_PUBKEY}
+      # Listener
+      TRITON_MANAGE_LISTEN: ${TRITON_MANAGE_LISTEN:-:8082}
+      TRITON_MANAGE_GATEWAY_LISTEN: ${TRITON_MANAGE_GATEWAY_LISTEN:-:8443}
+      TRITON_MANAGE_GATEWAY_HOSTNAME: ${TRITON_MANAGE_GATEWAY_HOSTNAME:-localhost}
+      TRITON_MANAGE_GATEWAY_URL: ${TRITON_MANAGE_GATEWAY_URL:-}
+      TRITON_MANAGE_HOST_IP: ${TRITON_MANAGE_HOST_IP:-}
+      TRITON_MANAGE_HOST_HOSTNAME: ${TRITON_MANAGE_HOST_HOSTNAME:-}
+      # License server connection (for binary sync + heartbeat)
+      TRITON_LICENSE_SERVER_URL: ${TRITON_LICENSE_SERVER_URL:-}
+      TRITON_LICENSE_TOKEN: ${TRITON_LICENSE_TOKEN:-}
+      TRITON_LICENSE_KEY: ${TRITON_LICENSE_KEY:-}
+      # Worker plumbing
+      TRITON_MANAGE_WORKER_KEY: ${TRITON_MANAGE_WORKER_KEY}
+      TRITON_MANAGE_BIN_DIR: /bins
+      TRITON_MANAGE_PARALLELISM: ${TRITON_MANAGE_PARALLELISM:-10}
+      # Credential vault (PostgreSQL AES-256-GCM)
+      TRITON_VAULT_KEY: ${TRITON_VAULT_KEY:-}
+      # TLS (optional — usually a reverse proxy terminates TLS instead)
+      TRITON_MANAGE_TLS_CERT: ${TRITON_MANAGE_TLS_CERT:-}
+      TRITON_MANAGE_TLS_KEY: ${TRITON_MANAGE_TLS_KEY:-}
+      TRITON_MANAGE_SESSION_TTL: ${TRITON_MANAGE_SESSION_TTL:-24h}
+    volumes:
+      - triton-manage-bins:/bins
+      - ${TLS_CERT_HOST_DIR:-/etc/triton/tls}:/etc/triton/tls:ro
+    ports:
+      - "${TRITON_MANAGE_HOST_PORT:-8082}:8082"
+      - "${TRITON_MANAGE_GATEWAY_HOST_PORT:-8443}:8443"
+
+volumes:
+  triton-manage-db-data:
+    name: triton-manage-db-data
+  triton-manage-bins:
+    name: triton-manage-bins

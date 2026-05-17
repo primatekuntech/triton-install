@@ -1,0 +1,70 @@
+# Triton License Server — standalone compose file.
+#
+# Self-contained: bundles its own PostgreSQL. Designed to run on a host
+# that ONLY hosts the licence server. For combined dev installs, see
+# the root /compose.yaml.
+#
+# Reads .env from the same directory (this file's parent). The deploy
+# install.sh writes that .env from env.template.
+
+services:
+
+  postgres:
+    image: docker.io/library/postgres:18-alpine
+    container_name: triton-license-db
+    hostname: triton-license-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-triton}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB:-triton_license}
+    volumes:
+      - triton-license-db-data:/var/lib/postgresql
+    ports:
+      # Bind to localhost only — never expose Postgres to the public internet.
+      - "127.0.0.1:${POSTGRES_PORT:-5436}:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-triton} -d ${POSTGRES_DB:-triton_license}"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  license-server:
+    image: ${TRITON_LICENSE_IMAGE:-ghcr.io/amiryahaya/triton-licenseserver:latest}
+    container_name: triton-licenseserver
+    hostname: triton-licenseserver
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      # Required
+      TRITON_LICENSE_SERVER_DB_URL: postgres://${POSTGRES_USER:-triton}:${POSTGRES_PASSWORD}@triton-license-db:5432/${POSTGRES_DB:-triton_license}?sslmode=disable
+      TRITON_LICENSE_SERVER_SIGNING_KEY: ${TRITON_LICENSE_SERVER_SIGNING_KEY}
+      TRITON_LICENSE_SERVER_ADMIN_EMAIL: ${TRITON_LICENSE_SERVER_ADMIN_EMAIL}
+      TRITON_LICENSE_SERVER_ADMIN_PASSWORD: ${TRITON_LICENSE_SERVER_ADMIN_PASSWORD}
+      # Optional — TLS termination at this container; omit if you proxy.
+      TRITON_LICENSE_SERVER_TLS_CERT: ${TRITON_LICENSE_SERVER_TLS_CERT:-}
+      TRITON_LICENSE_SERVER_TLS_KEY: ${TRITON_LICENSE_SERVER_TLS_KEY:-}
+      TRITON_LICENSE_SERVER_ALLOW_INSECURE: ${TRITON_LICENSE_SERVER_ALLOW_INSECURE:-}
+      TRITON_LICENSE_SERVER_LISTEN: ${TRITON_LICENSE_SERVER_LISTEN:-:8081}
+      TRITON_LICENSE_SERVER_STALE_THRESHOLD: ${TRITON_LICENSE_SERVER_STALE_THRESHOLD:-336h}
+      # Optional — public URL pushed to clients (used in invite emails).
+      TRITON_LICENSE_SERVER_PUBLIC_URL: ${TRITON_LICENSE_SERVER_PUBLIC_URL:-}
+      # Optional — Resend.com API key for sending invite emails.
+      RESEND_API_KEY: ${RESEND_API_KEY:-}
+      RESEND_FROM_EMAIL: ${RESEND_FROM_EMAIL:-}
+      # Worker binaries directory inside the container.
+      # The host directory (TRITON_LICENSE_SERVER_HOST_BIN_DIR) is mounted here.
+      TRITON_LICENSE_SERVER_BIN_DIR: /data/binaries
+    volumes:
+      # Mount TLS cert + key into the container if you set the env vars above.
+      - ${TLS_CERT_HOST_DIR:-/etc/triton/tls}:/etc/triton/tls:ro
+      # Worker binaries — persistent across container rebuilds.
+      - ${TRITON_LICENSE_SERVER_HOST_BIN_DIR:-/opt/triton/binaries}:/data/binaries
+    ports:
+      - "${TRITON_LICENSE_SERVER_HOST_PORT:-8081}:8081"
+
+volumes:
+  triton-license-db-data:
+    name: triton-license-db-data
