@@ -28,7 +28,7 @@ services:
       retries: 20
 
   manage-server:
-    image: ${TRITON_MANAGE_IMAGE:-ghcr.io/amiryahaya/triton-manageserver:latest}
+    image: ${TRITON_MANAGE_IMAGE:-ghcr.io/primatekuntech/triton-manageserver:latest}
     container_name: triton-manageserver
     hostname: triton-manageserver
     restart: unless-stopped
