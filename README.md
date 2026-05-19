@@ -4,13 +4,13 @@ Production installer for the Triton Manage Server. Container-based (Docker or Po
 
 ## Install
 
-Your vendor provides a licence bundle — a folder containing two files:
+Your vendor provides a licence bundle — a single file:
 
 ```
-triton-bundle/
-├── license.lic   # signed offline licence token
-└── pubkey        # vendor's Ed25519 public key
+license.lic   # signed offline licence token
 ```
+
+The vendor's public key is baked into the image at build time — nothing else to configure.
 
 Point the installer at the bundle:
 

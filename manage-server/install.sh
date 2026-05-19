@@ -7,10 +7,9 @@
 # Usage:
 #   sudo bash install.sh --license-file /path/to/bundle/license.lic
 #
-# The license bundle (provided by your vendor) contains two files:
+# The license bundle (provided by your vendor) is a single file:
 #   license.lic   — signed offline licence token
-#   pubkey        — vendor's Ed25519 public key (64 hex chars)
-# Both files must be in the same directory.
+# The vendor's public key is baked into the image at build time.
 #
 # Flags:
 #   --license-file PATH             Path to license.lic from your vendor bundle. Required.
@@ -56,13 +55,7 @@ done
 [[ -n "$LICENSE_FILE" ]] || die "--license-file is required (path to license.lic from your vendor bundle)"
 [[ -f "$LICENSE_FILE" ]] || die "license file not found: $LICENSE_FILE"
 
-BUNDLE_DIR="$(cd -- "$(dirname -- "$LICENSE_FILE")" && pwd)"
-PUBKEY_FILE="$BUNDLE_DIR/pubkey"
-[[ -f "$PUBKEY_FILE" ]] || die "pubkey file not found: $PUBKEY_FILE (must be in the same directory as license.lic)"
-
 LICENSE_TOKEN="$(cat "$LICENSE_FILE")"
-LICENSE_PUBKEY="$(cat "$PUBKEY_FILE" | tr -d '[:space:]')"
-[[ ${#LICENSE_PUBKEY} -eq 64 ]] || die "pubkey file must contain a 64 hex-char Ed25519 public key"
 
 # ── runtime detection ────────────────────────────────────────────────────
 if command -v podman-compose >/dev/null 2>&1; then
@@ -99,10 +92,7 @@ if [[ ! -f "$ENV_FILE" ]]; then
         "$ENV_FILE"
     info "secrets generated"
 
-    sed -i \
-        -e "s|^TRITON_MANAGE_LICENSE_SERVER_PUBKEY=.*|TRITON_MANAGE_LICENSE_SERVER_PUBKEY=$LICENSE_PUBKEY|" \
-        -e "s|^TRITON_LICENSE_KEY=.*|TRITON_LICENSE_KEY=$LICENSE_TOKEN|" \
-        "$ENV_FILE"
+    sed -i "s|^TRITON_LICENSE_KEY=.*|TRITON_LICENSE_KEY=$LICENSE_TOKEN|" "$ENV_FILE"
     info "licence configured"
 
     [[ -n "$LICENSE_SERVER_URL" ]] && sed -i "s|^TRITON_LICENSE_SERVER_URL=.*|TRITON_LICENSE_SERVER_URL=$LICENSE_SERVER_URL|" "$ENV_FILE"
