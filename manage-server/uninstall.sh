@@ -48,8 +48,6 @@ podman rmi "$IMAGE" 2>/dev/null || docker rmi "$IMAGE" 2>/dev/null || true
 if [[ $PURGE -eq 1 ]]; then
     info "DESTRUCTIVE: removing manage server volumes..."
     info "  this deletes: scan history, hosts, users, worker binaries"
-    read -r -p "  Are you sure? Type 'yes' to confirm: " CONFIRM
-    [[ "$CONFIRM" == "yes" ]] || die "aborted"
     for vol in triton-manage-db-data triton-manage-bins; do
         podman volume rm -f "$vol" 2>/dev/null \
             || docker volume rm -f "$vol" 2>/dev/null \
