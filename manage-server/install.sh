@@ -87,6 +87,10 @@ else
     info "reusing existing .env at $ENV_FILE"
 fi
 
+# ── pull latest image ────────────────────────────────────────────────────
+info "pulling latest image..."
+"${COMPOSE[@]}" --env-file "$ENV_FILE" pull manage-server
+
 # ── start ────────────────────────────────────────────────────────────────
 info "starting containers..."
 "${COMPOSE[@]}" --env-file "$ENV_FILE" up -d
