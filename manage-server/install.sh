@@ -10,6 +10,7 @@
 # Flags (all optional):
 #   --gateway-hostname HOST         Agent mTLS hostname (defaults to current FQDN).
 #   --manage-host-ip IP             Host LAN IP — used for "+ This machine".
+#   --port PORT                     Host port for the web UI (default: 8082).
 #   --image TAG                     Pin a specific manage-server image tag.
 #   --no-tls                        Skip the TLS-required sanity check (dev).
 set -euo pipefail
@@ -23,12 +24,14 @@ die()  { printf '[manage-server] error: %s\n' "$*" >&2; exit 1; }
 # ── arg parsing ──────────────────────────────────────────────────────────
 GATEWAY_HOST=""
 HOST_IP=""
+PORT=""
 IMAGE=""
 NO_TLS=0
 while [[ $# -gt 0 ]]; do
     case "$1" in
         --gateway-hostname) GATEWAY_HOST="$2"; shift 2 ;;
         --manage-host-ip)   HOST_IP="$2";      shift 2 ;;
+        --port)             PORT="$2";         shift 2 ;;
         --image)            IMAGE="$2";        shift 2 ;;
         --no-tls)           NO_TLS=1;          shift ;;
         -h|--help) grep '^#' "$0" | sed 's/^# //;s/^#//'; exit 0 ;;
@@ -75,6 +78,7 @@ if [[ ! -f "$ENV_FILE" ]]; then
 
     [[ -n "$GATEWAY_HOST" ]] && sed -i "s|^TRITON_MANAGE_GATEWAY_HOSTNAME=.*|TRITON_MANAGE_GATEWAY_HOSTNAME=$GATEWAY_HOST|" "$ENV_FILE"
     [[ -n "$HOST_IP"      ]] && sed -i "s|^TRITON_MANAGE_HOST_IP=.*|TRITON_MANAGE_HOST_IP=$HOST_IP|"                       "$ENV_FILE"
+    [[ -n "$PORT"         ]] && sed -i "s|^TRITON_MANAGE_HOST_PORT=.*|TRITON_MANAGE_HOST_PORT=$PORT|"                      "$ENV_FILE"
     [[ -n "$IMAGE"        ]] && sed -i "s|^TRITON_MANAGE_IMAGE=.*|TRITON_MANAGE_IMAGE=$IMAGE|"                             "$ENV_FILE"
 
     info ".env created at $ENV_FILE"

@@ -30,6 +30,7 @@ curl -fsSL https://raw.githubusercontent.com/primatekuntech/triton-install/main/
 |------|-------------|
 | `--gateway-hostname HOST` | Agent mTLS hostname (defaults to current FQDN). |
 | `--manage-host-ip IP` | Host LAN IP for "+ This machine" auto-registration. |
+| `--port PORT` | Host port for the web UI (default: `8082`). |
 | `--image TAG` | Pin a specific image tag (e.g. `1.0.0-rc.2`). |
 | `--no-tls` | Skip TLS sanity check (dev only). |
 
