@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
-# uninstall.sh — stop and remove Manage Server containers.
+# uninstall.sh — stop and remove Manage Server containers and image.
 #
 # By default, KEEPS the PostgreSQL volume (scan history, hosts, users).
 # Pass --purge-data to delete the volumes as well — irreversible.
 #
 # Usage:
-#   sudo bash uninstall.sh             # stop + remove containers, keep DB
+#   sudo bash uninstall.sh             # stop + remove containers + image, keep DB
 #   sudo bash uninstall.sh --purge-data  # also delete DB + binaries volume
 set -euo pipefail
 
@@ -38,6 +38,12 @@ else
     info ".env not found, attempting raw container cleanup..."
     podman rm -f triton-manageserver triton-manage-db 2>/dev/null || true
 fi
+
+# ── remove image ──────────────────────────────────────────────────────────
+IMAGE=$(grep -E '^TRITON_MANAGE_IMAGE=' .env 2>/dev/null | cut -d= -f2)
+IMAGE=${IMAGE:-ghcr.io/primatekuntech/triton-manage-server:latest}
+info "removing image ${IMAGE}..."
+podman rmi "$IMAGE" 2>/dev/null || docker rmi "$IMAGE" 2>/dev/null || true
 
 if [[ $PURGE -eq 1 ]]; then
     info "DESTRUCTIVE: removing manage server volumes..."
