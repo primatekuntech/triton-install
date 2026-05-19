@@ -11,6 +11,14 @@
 # Pass flags through to install.sh:
 #   curl -fsSL https://raw.githubusercontent.com/primatekuntech/triton-install/main/get.sh \
 #     | sudo bash -s -- --gateway-hostname manage.example.com --manage-host-ip 10.0.0.5
+#
+# Uninstall (stop containers, keep data):
+#   curl -fsSL https://raw.githubusercontent.com/primatekuntech/triton-install/main/get.sh \
+#     | sudo bash -s -- --uninstall
+#
+# Uninstall and delete all data (irreversible):
+#   curl -fsSL https://raw.githubusercontent.com/primatekuntech/triton-install/main/get.sh \
+#     | sudo bash -s -- --uninstall --purge-data
 
 set -euo pipefail
 
@@ -26,6 +34,16 @@ warn()    { printf "${YELLOW}  !${RESET} %s\n" "$*"; }
 die()     { printf "\n${RED}  ✗ error:${RESET} %s\n\n" "$*" >&2; exit 1; }
 banner()  { printf "\n${BOLD}%s${RESET}\n\n" "$*"; }
 
+# ── arg pre-scan (before any output) ─────────────────────────────────────
+UNINSTALL=0
+PASSTHROUGH=()
+for arg in "$@"; do
+    case "$arg" in
+        --uninstall) UNINSTALL=1 ;;
+        *)           PASSTHROUGH+=("$arg") ;;
+    esac
+done
+
 # ── OS detection ──────────────────────────────────────────────────────────
 case "$(uname -s)" in
     Linux)  PLATFORM=linux ;;
@@ -33,19 +51,31 @@ case "$(uname -s)" in
     *)      die "unsupported OS: $(uname -s)" ;;
 esac
 
+# ── install directory ─────────────────────────────────────────────────────
+if [[ "$PLATFORM" == "linux" ]]; then
+    INSTALL_DIR="/opt/triton-manage-server"
+else
+    INSTALL_DIR="${HOME}/.local/share/triton-manage-server"
+fi
+
+# ── uninstall shortcut ────────────────────────────────────────────────────
+if [[ $UNINSTALL -eq 1 ]]; then
+    banner "▶  Triton Manage Server — Uninstaller"
+    info "platform: $PLATFORM"
+    if [[ "$PLATFORM" == "linux" && $EUID -ne 0 ]]; then
+        die "run as root on Linux:\n\n    curl -fsSL https://raw.githubusercontent.com/primatekuntech/triton-install/main/get.sh | sudo bash -s -- --uninstall"
+    fi
+    [[ -f "${INSTALL_DIR}/uninstall.sh" ]] \
+        || die "Triton Manage Server does not appear to be installed (${INSTALL_DIR} not found)"
+    exec bash "${INSTALL_DIR}/uninstall.sh" "${PASSTHROUGH[@]}"
+fi
+
 banner "▶  Triton Manage Server — Installer"
 info "platform: $PLATFORM"
 
 # ── root check ────────────────────────────────────────────────────────────
 if [[ "$PLATFORM" == "linux" && $EUID -ne 0 ]]; then
     die "run as root on Linux:\n\n    curl -fsSL https://raw.githubusercontent.com/primatekuntech/triton-install/main/get.sh | sudo bash"
-fi
-
-# ── install directory ─────────────────────────────────────────────────────
-if [[ "$PLATFORM" == "linux" ]]; then
-    INSTALL_DIR="/opt/triton-manage-server"
-else
-    INSTALL_DIR="${HOME}/.local/share/triton-manage-server"
 fi
 
 # ── runtime detection ─────────────────────────────────────────────────────
@@ -154,4 +184,4 @@ ok "installer files saved to ${INSTALL_DIR}"
 
 # ── hand off ─────────────────────────────────────────────────────────────
 echo ""
-exec bash "${INSTALL_DIR}/install.sh" "$@"
+exec bash "${INSTALL_DIR}/install.sh" "${PASSTHROUGH[@]}"
