@@ -7,6 +7,7 @@
 # Usage:
 #   sudo bash upgrade.sh                # latest from ghcr.io
 #   sudo bash upgrade.sh --image TAG    # pin a specific image tag
+#   sudo bash upgrade.sh --port PORT    # change the web UI host port
 set -euo pipefail
 
 SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]:-$0}")" &>/dev/null && pwd)"
@@ -20,9 +21,11 @@ die()  { printf '[manage-server] error: %s\n' "$*" >&2; exit 1; }
 
 # ── arg parsing ───────────────────────────────────────────────────────────
 IMAGE=""
+PORT=""
 while [[ $# -gt 0 ]]; do
     case "$1" in
         --image) IMAGE="$2"; shift 2 ;;
+        --port)  PORT="$2";  shift 2 ;;
         -h|--help) grep '^#' "$0" | sed 's/^# //;s/^#//'; exit 0 ;;
         *) die "unknown flag: $1" ;;
     esac
@@ -38,6 +41,10 @@ else die "no compose runtime found"; fi
 if [[ -n "$IMAGE" ]]; then
     sed -i "s|^TRITON_MANAGE_IMAGE=.*|TRITON_MANAGE_IMAGE=$IMAGE|" .env
     info "pinned image to $IMAGE"
+fi
+if [[ -n "$PORT" ]]; then
+    sed -i "s|^TRITON_MANAGE_HOST_PORT=.*|TRITON_MANAGE_HOST_PORT=$PORT|" .env
+    info "host port set to $PORT"
 fi
 
 # ── pre-upgrade DB backup ─────────────────────────────────────────────────
