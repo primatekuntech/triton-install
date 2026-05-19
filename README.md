@@ -5,7 +5,7 @@ Production installer for the Triton Manage Server. Container-based (Docker or Po
 ## Install
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/primatekuntech/triton-install/main/manage-server/install.sh | sudo bash
+curl -fsSL https://raw.githubusercontent.com/primatekuntech/triton-install/main/get.sh | sudo bash
 ```
 
 That's it. The setup wizard walks you through the rest.
@@ -20,8 +20,10 @@ After install, open `http://localhost:8082` and complete the wizard:
 
 ## Optional flags
 
+Pass flags after `--`:
+
 ```bash
-sudo bash install.sh [flags]
+curl -fsSL https://raw.githubusercontent.com/primatekuntech/triton-install/main/get.sh | sudo bash -s -- [flags]
 ```
 
 | Flag | Description |
@@ -31,18 +33,36 @@ sudo bash install.sh [flags]
 | `--image TAG` | Pin a specific image tag (e.g. `1.0.0-rc.2`). |
 | `--no-tls` | Skip TLS sanity check (dev only). |
 
-## Other commands
+## Upgrade
+
+Pull the latest image and restart (keeps all data, runs DB migrations automatically):
 
 ```bash
-# Upgrade to latest image
-sudo bash manage-server/upgrade.sh
+curl -fsSL https://raw.githubusercontent.com/primatekuntech/triton-install/main/get.sh | sudo bash -s -- --upgrade
+```
 
-# Uninstall
-sudo bash manage-server/uninstall.sh
+Pin a specific version:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/primatekuntech/triton-install/main/get.sh | sudo bash -s -- --upgrade --image ghcr.io/primatekuntech/triton-manage-server:1.2.0
+```
+
+## Uninstall
+
+Stop containers and remove them, but keep all data (PostgreSQL volume, credentials vault):
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/primatekuntech/triton-install/main/get.sh | sudo bash -s -- --uninstall
+```
+
+Also delete all data (irreversible):
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/primatekuntech/triton-install/main/get.sh | sudo bash -s -- --uninstall --purge-data
 ```
 
 ## Requirements
 
-- Linux (amd64 or arm64)
-- Docker or Podman with Compose
+- Linux (amd64 or arm64) or macOS
+- Docker or Podman with Compose (auto-installed if missing)
 - Port 443 open (HTTPS)
