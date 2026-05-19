@@ -9,7 +9,7 @@
 #   sudo bash upgrade.sh --image TAG    # pin a specific image tag
 set -euo pipefail
 
-SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" &>/dev/null && pwd)"
+SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]:-$0}")" &>/dev/null && pwd)"
 cd "$SCRIPT_DIR"
 
 info() { printf '[manage-server] %s\n' "$*"; }
