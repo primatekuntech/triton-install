@@ -12,6 +12,14 @@
 #   curl -fsSL https://raw.githubusercontent.com/primatekuntech/triton-install/main/get.sh \
 #     | sudo bash -s -- --gateway-hostname manage.example.com --manage-host-ip 10.0.0.5
 #
+# Upgrade (pull latest image, run DB migrations, keep data):
+#   curl -fsSL https://raw.githubusercontent.com/primatekuntech/triton-install/main/get.sh \
+#     | sudo bash -s -- --upgrade
+#
+# Upgrade to a specific image tag:
+#   curl -fsSL https://raw.githubusercontent.com/primatekuntech/triton-install/main/get.sh \
+#     | sudo bash -s -- --upgrade --image ghcr.io/primatekuntech/triton-manage-server:1.2.0
+#
 # Uninstall (stop containers, keep data):
 #   curl -fsSL https://raw.githubusercontent.com/primatekuntech/triton-install/main/get.sh \
 #     | sudo bash -s -- --uninstall
@@ -36,10 +44,12 @@ banner()  { printf "\n${BOLD}%s${RESET}\n\n" "$*"; }
 
 # ── arg pre-scan (before any output) ─────────────────────────────────────
 UNINSTALL=0
+UPGRADE=0
 PASSTHROUGH=()
 for arg in "$@"; do
     case "$arg" in
         --uninstall) UNINSTALL=1 ;;
+        --upgrade)   UPGRADE=1 ;;
         *)           PASSTHROUGH+=("$arg") ;;
     esac
 done
@@ -68,6 +78,25 @@ if [[ $UNINSTALL -eq 1 ]]; then
     [[ -f "${INSTALL_DIR}/uninstall.sh" ]] \
         || die "Triton Manage Server does not appear to be installed (${INSTALL_DIR} not found)"
     exec bash "${INSTALL_DIR}/uninstall.sh" "${PASSTHROUGH[@]}"
+fi
+
+# ── upgrade shortcut ──────────────────────────────────────────────────────
+if [[ $UPGRADE -eq 1 ]]; then
+    banner "▶  Triton Manage Server — Upgrade"
+    info "platform: $PLATFORM"
+    if [[ "$PLATFORM" == "linux" && $EUID -ne 0 ]]; then
+        die "run as root on Linux:\n\n    curl -fsSL https://raw.githubusercontent.com/primatekuntech/triton-install/main/get.sh | sudo bash -s -- --upgrade"
+    fi
+    [[ -d "$INSTALL_DIR" ]] \
+        || die "Triton Manage Server does not appear to be installed (${INSTALL_DIR} not found)"
+    info "refreshing installer files..."
+    for f in "${INSTALLER_FILES[@]}"; do
+        curl -fsSL "${REPO_BASE}/${f}" -o "${INSTALL_DIR}/${f}"
+    done
+    chmod +x "${INSTALL_DIR}/install.sh" "${INSTALL_DIR}/upgrade.sh" "${INSTALL_DIR}/uninstall.sh"
+    ok "installer files refreshed"
+    echo ""
+    exec bash "${INSTALL_DIR}/upgrade.sh" "${PASSTHROUGH[@]}"
 fi
 
 banner "▶  Triton Manage Server — Installer"
