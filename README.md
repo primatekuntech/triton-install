@@ -4,31 +4,39 @@ Production installer for the Triton Manage Server. Container-based (Docker or Po
 
 ## Install
 
-```bash
-curl -fsSL https://raw.githubusercontent.com/primatekuntech/triton-install/main/get.sh | sudo bash
+Your vendor provides a licence bundle — a folder containing two files:
+
+```
+triton-bundle/
+├── license.lic   # signed offline licence token
+└── pubkey        # vendor's Ed25519 public key
 ```
 
-That's it. The setup wizard walks you through the rest.
+Point the installer at the bundle:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/primatekuntech/triton-install/main/get.sh | sudo bash -s -- --license-file /path/to/triton-bundle/license.lic
+```
 
 ## Setup wizard
 
 After install, open `http://localhost:8082` and complete the wizard:
 
 1. Set your manage server name
-2. Enter your Triton licence server URL and licence ID — or upload an air-gap licence file
-3. Create the admin account
+2. Create the admin account
 
 ## Optional flags
 
 Pass flags after `--`:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/primatekuntech/triton-install/main/get.sh | sudo bash -s -- [flags]
+curl -fsSL https://raw.githubusercontent.com/primatekuntech/triton-install/main/get.sh | sudo bash -s -- --license-file /path/to/license.lic [flags]
 ```
 
 | Flag | Description |
 |------|-------------|
-| `--license-server-url URL` | Vendor's License Server URL. Public key is fetched automatically. |
+| `--license-file PATH` | Path to `license.lic` from your vendor bundle. **Required.** |
+| `--license-server-url URL` | License Server URL for ongoing heartbeats (optional, omit for air-gap). |
 | `--gateway-hostname HOST` | Agent mTLS hostname (defaults to current FQDN). |
 | `--manage-host-ip IP` | Host LAN IP for "+ This machine" auto-registration. |
 | `--port PORT` | Host port for the web UI (default: `8082`). |
