@@ -8,6 +8,8 @@
 #   sudo bash install.sh
 #
 # Flags (all optional):
+#   --license-server-pubkey HEX     Vendor's Ed25519 public key (64 hex chars). Required to start.
+#   --license-server-url URL        Vendor's License Server URL.
 #   --gateway-hostname HOST         Agent mTLS hostname (defaults to current FQDN).
 #   --manage-host-ip IP             Host LAN IP — used for "+ This machine".
 #   --port PORT                     Host port for the web UI (default: 8082).
@@ -22,6 +24,8 @@ info() { printf '[manage-server] %s\n' "$*"; }
 die()  { printf '[manage-server] error: %s\n' "$*" >&2; exit 1; }
 
 # ── arg parsing ──────────────────────────────────────────────────────────
+LICENSE_PUBKEY=""
+LICENSE_SERVER_URL=""
 GATEWAY_HOST=""
 HOST_IP=""
 PORT=""
@@ -29,11 +33,13 @@ IMAGE=""
 NO_TLS=0
 while [[ $# -gt 0 ]]; do
     case "$1" in
-        --gateway-hostname) GATEWAY_HOST="$2"; shift 2 ;;
-        --manage-host-ip)   HOST_IP="$2";      shift 2 ;;
-        --port)             PORT="$2";         shift 2 ;;
-        --image)            IMAGE="$2";        shift 2 ;;
-        --no-tls)           NO_TLS=1;          shift ;;
+        --license-server-pubkey) LICENSE_PUBKEY="$2";     shift 2 ;;
+        --license-server-url)    LICENSE_SERVER_URL="$2"; shift 2 ;;
+        --gateway-hostname)      GATEWAY_HOST="$2";       shift 2 ;;
+        --manage-host-ip)        HOST_IP="$2";            shift 2 ;;
+        --port)                  PORT="$2";               shift 2 ;;
+        --image)                 IMAGE="$2";              shift 2 ;;
+        --no-tls)                NO_TLS=1;                shift ;;
         -h|--help) grep '^#' "$0" | sed 's/^# //;s/^#//'; exit 0 ;;
         *) die "unknown flag: $1 (try --help)" ;;
     esac
@@ -76,10 +82,12 @@ if [[ ! -f "$ENV_FILE" ]]; then
         "$ENV_FILE"
     info "vault key generated (PostgreSQL AES-256-GCM)"
 
-    [[ -n "$GATEWAY_HOST" ]] && sed -i "s|^TRITON_MANAGE_GATEWAY_HOSTNAME=.*|TRITON_MANAGE_GATEWAY_HOSTNAME=$GATEWAY_HOST|" "$ENV_FILE"
-    [[ -n "$HOST_IP"      ]] && sed -i "s|^TRITON_MANAGE_HOST_IP=.*|TRITON_MANAGE_HOST_IP=$HOST_IP|"                       "$ENV_FILE"
-    [[ -n "$PORT"         ]] && sed -i "s|^TRITON_MANAGE_HOST_PORT=.*|TRITON_MANAGE_HOST_PORT=$PORT|"                      "$ENV_FILE"
-    [[ -n "$IMAGE"        ]] && sed -i "s|^TRITON_MANAGE_IMAGE=.*|TRITON_MANAGE_IMAGE=$IMAGE|"                             "$ENV_FILE"
+    [[ -n "$LICENSE_PUBKEY"     ]] && sed -i "s|^TRITON_MANAGE_LICENSE_SERVER_PUBKEY=.*|TRITON_MANAGE_LICENSE_SERVER_PUBKEY=$LICENSE_PUBKEY|" "$ENV_FILE"
+    [[ -n "$LICENSE_SERVER_URL" ]] && sed -i "s|^TRITON_LICENSE_SERVER_URL=.*|TRITON_LICENSE_SERVER_URL=$LICENSE_SERVER_URL|"                 "$ENV_FILE"
+    [[ -n "$GATEWAY_HOST"       ]] && sed -i "s|^TRITON_MANAGE_GATEWAY_HOSTNAME=.*|TRITON_MANAGE_GATEWAY_HOSTNAME=$GATEWAY_HOST|"             "$ENV_FILE"
+    [[ -n "$HOST_IP"            ]] && sed -i "s|^TRITON_MANAGE_HOST_IP=.*|TRITON_MANAGE_HOST_IP=$HOST_IP|"                                   "$ENV_FILE"
+    [[ -n "$PORT"               ]] && sed -i "s|^TRITON_MANAGE_HOST_PORT=.*|TRITON_MANAGE_HOST_PORT=$PORT|"                                  "$ENV_FILE"
+    [[ -n "$IMAGE"              ]] && sed -i "s|^TRITON_MANAGE_IMAGE=.*|TRITON_MANAGE_IMAGE=$IMAGE|"                                         "$ENV_FILE"
 
     info ".env created at $ENV_FILE"
     info "  back this up — it contains the JWT signing key, worker key, and vault key"

@@ -28,6 +28,8 @@ curl -fsSL https://raw.githubusercontent.com/primatekuntech/triton-install/main/
 
 | Flag | Description |
 |------|-------------|
+| `--license-server-pubkey HEX` | Vendor's Ed25519 public key (64 hex chars). Required to start. |
+| `--license-server-url URL` | Vendor's License Server URL. |
 | `--gateway-hostname HOST` | Agent mTLS hostname (defaults to current FQDN). |
 | `--manage-host-ip IP` | Host LAN IP for "+ This machine" auto-registration. |
 | `--port PORT` | Host port for the web UI (default: `8082`). |
