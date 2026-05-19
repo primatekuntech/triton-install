@@ -75,8 +75,15 @@ if [[ $UNINSTALL -eq 1 ]]; then
     if [[ "$PLATFORM" == "linux" && $EUID -ne 0 ]]; then
         die "run as root on Linux:\n\n    curl -fsSL https://raw.githubusercontent.com/primatekuntech/triton-install/main/get.sh | sudo bash -s -- --uninstall"
     fi
-    [[ -f "${INSTALL_DIR}/uninstall.sh" ]] \
+    [[ -d "$INSTALL_DIR" ]] \
         || die "Triton Manage Server does not appear to be installed (${INSTALL_DIR} not found)"
+    info "refreshing installer files..."
+    for f in "${INSTALLER_FILES[@]}"; do
+        curl -fsSL "${REPO_BASE}/${f}" -o "${INSTALL_DIR}/${f}"
+    done
+    chmod +x "${INSTALL_DIR}/install.sh" "${INSTALL_DIR}/upgrade.sh" "${INSTALL_DIR}/uninstall.sh"
+    ok "installer files refreshed"
+    echo ""
     exec bash "${INSTALL_DIR}/uninstall.sh" "${PASSTHROUGH[@]}"
 fi
 
