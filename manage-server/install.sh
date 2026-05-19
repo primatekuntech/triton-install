@@ -8,8 +8,8 @@
 #   sudo bash install.sh
 #
 # Flags (all optional):
-#   --license-server-pubkey HEX     Vendor's Ed25519 public key (64 hex chars). Required to start.
-#   --license-server-url URL        Vendor's License Server URL.
+#   --license-server-url URL        Vendor's License Server URL. The public key is
+#                                   fetched automatically from the license server.
 #   --gateway-hostname HOST         Agent mTLS hostname (defaults to current FQDN).
 #   --manage-host-ip IP             Host LAN IP — used for "+ This machine".
 #   --port PORT                     Host port for the web UI (default: 8082).
@@ -24,7 +24,6 @@ info() { printf '[manage-server] %s\n' "$*"; }
 die()  { printf '[manage-server] error: %s\n' "$*" >&2; exit 1; }
 
 # ── arg parsing ──────────────────────────────────────────────────────────
-LICENSE_PUBKEY=""
 LICENSE_SERVER_URL=""
 GATEWAY_HOST=""
 HOST_IP=""
@@ -33,7 +32,6 @@ IMAGE=""
 NO_TLS=0
 while [[ $# -gt 0 ]]; do
     case "$1" in
-        --license-server-pubkey) LICENSE_PUBKEY="$2";     shift 2 ;;
         --license-server-url)    LICENSE_SERVER_URL="$2"; shift 2 ;;
         --gateway-hostname)      GATEWAY_HOST="$2";       shift 2 ;;
         --manage-host-ip)        HOST_IP="$2";            shift 2 ;;
@@ -82,8 +80,17 @@ if [[ ! -f "$ENV_FILE" ]]; then
         "$ENV_FILE"
     info "vault key generated (PostgreSQL AES-256-GCM)"
 
-    [[ -n "$LICENSE_PUBKEY"     ]] && sed -i "s|^TRITON_MANAGE_LICENSE_SERVER_PUBKEY=.*|TRITON_MANAGE_LICENSE_SERVER_PUBKEY=$LICENSE_PUBKEY|" "$ENV_FILE"
-    [[ -n "$LICENSE_SERVER_URL" ]] && sed -i "s|^TRITON_LICENSE_SERVER_URL=.*|TRITON_LICENSE_SERVER_URL=$LICENSE_SERVER_URL|"                 "$ENV_FILE"
+    if [[ -n "$LICENSE_SERVER_URL" ]]; then
+        sed -i "s|^TRITON_LICENSE_SERVER_URL=.*|TRITON_LICENSE_SERVER_URL=$LICENSE_SERVER_URL|" "$ENV_FILE"
+        info "fetching public key from license server..."
+        LICENSE_PUBKEY=$(curl -fsSL "${LICENSE_SERVER_URL}/api/v1/license/pubkey" \
+            | grep -o '"pubkey":"[^"]*"' | cut -d'"' -f4) \
+            || die "failed to fetch public key from ${LICENSE_SERVER_URL}"
+        [[ ${#LICENSE_PUBKEY} -eq 64 ]] \
+            || die "license server returned an invalid public key (expected 64 hex chars)"
+        sed -i "s|^TRITON_MANAGE_LICENSE_SERVER_PUBKEY=.*|TRITON_MANAGE_LICENSE_SERVER_PUBKEY=$LICENSE_PUBKEY|" "$ENV_FILE"
+        info "public key configured"
+    fi
     [[ -n "$GATEWAY_HOST"       ]] && sed -i "s|^TRITON_MANAGE_GATEWAY_HOSTNAME=.*|TRITON_MANAGE_GATEWAY_HOSTNAME=$GATEWAY_HOST|"             "$ENV_FILE"
     [[ -n "$HOST_IP"            ]] && sed -i "s|^TRITON_MANAGE_HOST_IP=.*|TRITON_MANAGE_HOST_IP=$HOST_IP|"                                   "$ENV_FILE"
     [[ -n "$PORT"               ]] && sed -i "s|^TRITON_MANAGE_HOST_PORT=.*|TRITON_MANAGE_HOST_PORT=$PORT|"                                  "$ENV_FILE"
