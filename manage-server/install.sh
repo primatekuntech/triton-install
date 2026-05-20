@@ -13,7 +13,6 @@
 #
 # Flags:
 #   --license-file PATH             Path to license.lic from your vendor bundle. Required.
-#   --license-server-url URL        License Server URL for ongoing heartbeats (optional).
 #   --gateway-hostname HOST         Agent mTLS hostname (defaults to current FQDN).
 #   --manage-host-ip IP             Host LAN IP — used for "+ This machine".
 #   --port PORT                     Host port for the web UI (default: 8082).
@@ -29,7 +28,6 @@ die()  { printf '[manage-server] error: %s\n' "$*" >&2; exit 1; }
 
 # ── arg parsing ──────────────────────────────────────────────────────────
 LICENSE_FILE=""
-LICENSE_SERVER_URL=""
 GATEWAY_HOST=""
 HOST_IP=""
 PORT=""
@@ -38,7 +36,6 @@ NO_TLS=0
 while [[ $# -gt 0 ]]; do
     case "$1" in
         --license-file)          LICENSE_FILE="$2";       shift 2 ;;
-        --license-server-url)    LICENSE_SERVER_URL="$2"; shift 2 ;;
         --gateway-hostname)      GATEWAY_HOST="$2";       shift 2 ;;
         --manage-host-ip)        HOST_IP="$2";            shift 2 ;;
         --port)                  PORT="$2";               shift 2 ;;
@@ -95,8 +92,7 @@ if [[ ! -f "$ENV_FILE" ]]; then
     sed -i "s|^TRITON_LICENSE_KEY=.*|TRITON_LICENSE_KEY=$LICENSE_TOKEN|" "$ENV_FILE"
     info "licence configured"
 
-    [[ -n "$LICENSE_SERVER_URL" ]] && sed -i "s|^TRITON_LICENSE_SERVER_URL=.*|TRITON_LICENSE_SERVER_URL=$LICENSE_SERVER_URL|" "$ENV_FILE"
-    [[ -n "$GATEWAY_HOST"       ]] && sed -i "s|^TRITON_MANAGE_GATEWAY_HOSTNAME=.*|TRITON_MANAGE_GATEWAY_HOSTNAME=$GATEWAY_HOST|" "$ENV_FILE"
+    [[ -n "$GATEWAY_HOST" ]] && sed -i "s|^TRITON_MANAGE_GATEWAY_HOSTNAME=.*|TRITON_MANAGE_GATEWAY_HOSTNAME=$GATEWAY_HOST|" "$ENV_FILE"
     [[ -n "$HOST_IP"            ]] && sed -i "s|^TRITON_MANAGE_HOST_IP=.*|TRITON_MANAGE_HOST_IP=$HOST_IP|" "$ENV_FILE"
     [[ -n "$PORT"               ]] && sed -i "s|^TRITON_MANAGE_HOST_PORT=.*|TRITON_MANAGE_HOST_PORT=$PORT|" "$ENV_FILE"
     [[ -n "$IMAGE"              ]] && sed -i "s|^TRITON_MANAGE_IMAGE=.*|TRITON_MANAGE_IMAGE=$IMAGE|" "$ENV_FILE"

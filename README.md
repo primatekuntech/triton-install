@@ -36,7 +36,6 @@ curl -fsSL https://raw.githubusercontent.com/primatekuntech/triton-install/main/
 | Flag | Description |
 |------|-------------|
 | `--license-file PATH` | Path to `license.lic` from your vendor bundle. **Required.** |
-| `--license-server-url URL` | License Server URL for ongoing heartbeats (optional, omit for air-gap). |
 | `--gateway-hostname HOST` | Agent mTLS hostname (defaults to current FQDN). |
 | `--manage-host-ip IP` | Host LAN IP for "+ This machine" auto-registration. |
 | `--port PORT` | Host port for the web UI (default: `8082`). |
