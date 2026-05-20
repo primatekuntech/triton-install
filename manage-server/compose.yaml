@@ -64,7 +64,6 @@ services:
     volumes:
       - triton-manage-bins:/bins
       - ${TLS_CERT_HOST_DIR:-/etc/triton/tls}:/etc/triton/tls:ro
-      - /etc/machine-id:/etc/machine-id:ro
     ports:
       - "${TRITON_MANAGE_HOST_PORT:-8082}:8082"
       - "${TRITON_MANAGE_GATEWAY_HOST_PORT:-8443}:8443"
