@@ -136,11 +136,21 @@ info "  2. Complete the setup wizard"
 info "  3. Configure TLS via reverse proxy (see docs)"
 info ""
 
-# ── display machine-id for host-bound licence generation ─────────────────────
+# ── machine ID ───────────────────────────────────────────────────────────
+# Print the SHA-3-256 hash of /etc/machine-id so the customer can share
+# it with the vendor when requesting an offline .lic bound to this host.
+# The hash is stable: /etc/machine-id never changes after OS installation.
 if [[ -f /etc/machine-id ]]; then
-    RAW_ID="$(cat /etc/machine-id | tr -d '[:space:]')"
-    MACHINE_ID_HASH="$(echo -n "$RAW_ID" | sha3sum -a 256 2>/dev/null | awk '{print $1}' || \
-                       python3 -c "import hashlib,sys; print(hashlib.sha3_256(sys.stdin.buffer.read()).hexdigest())" <<< "$RAW_ID" 2>/dev/null || echo '')"
+    MACHINE_ID_RAW=$(cat /etc/machine-id | tr -d '[:space:]')
+    if command -v python3 >/dev/null 2>&1; then
+        MACHINE_ID_HASH=$(python3 -c "import hashlib; print(hashlib.sha3_256('${MACHINE_ID_RAW}'.encode()).hexdigest())")
+    elif command -v sha3sum >/dev/null 2>&1; then
+        MACHINE_ID_HASH=$(echo -n "$MACHINE_ID_RAW" | sha3sum -a 256 | awk '{print $1}')
+    elif command -v openssl >/dev/null 2>&1; then
+        MACHINE_ID_HASH=$(printf '%s' "${MACHINE_ID_RAW}" | openssl dgst -sha3-256 -hex 2>/dev/null | awk '{print $2}')
+    else
+        MACHINE_ID_HASH=""
+    fi
     if [[ -n "$MACHINE_ID_HASH" ]]; then
         info "── Host Machine ID ──────────────────────────────────────────────────────"
         info "  Provide this value to your vendor when requesting a host-bound .lic file."
