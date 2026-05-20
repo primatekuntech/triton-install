@@ -71,22 +71,35 @@ Also delete all data (irreversible):
 curl -fsSL https://raw.githubusercontent.com/primatekuntech/triton-install/main/get.sh | sudo bash -s -- --uninstall --purge-data
 ```
 
-## Host-bound licences (optional)
+## Host-bound licences
 
 Your vendor can issue an offline `.lic` file that is cryptographically bound to a specific host
-so it cannot be installed on any other machine.
+so it cannot be used on any other machine.
 
 **To get a host-bound licence:**
 
-1. Run `install.sh` on the target server — the output prints a **Machine ID** line:
+1. Run the installer on the target server. At the end of the output you will see:
    ```
-   [manage-server] Machine ID (SHA-3-256): <64-hex-chars>
+   [manage-server] ── Host Machine ID ──────────────────────────────────────────────────────
+   [manage-server]   Provide this value to your vendor when requesting a host-bound .lic file.
+   [manage-server]   Machine ID (SHA-3-256): <64-hex-chars>
+   [manage-server] ────────────────────────────────────────────────────────────────────────
    ```
-2. Share that value with your vendor when requesting the `.lic` file.
-3. The vendor enters it in the License Portal when generating the offline token.
-4. Install as usual — the Manage Server verifies the binding at every startup.
+2. Share the 64-character hex value with your vendor.
+3. The vendor enters it in the License Portal when generating the offline `.lic` token.
+4. Re-run the installer with the new `.lic` file — the Manage Server verifies the binding at every startup.
 
-For air-gapped deployments without host binding the `.lic` file is portable but anyone who
+**The Machine ID is stable.** It is a SHA-3-256 hash of `/etc/machine-id`, which is written once
+at OS installation and never changes. Container restarts, image upgrades, and re-running the
+installer will always produce the same value.
+
+To retrieve the Machine ID at any time without re-installing, simply re-run the install command:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/primatekuntech/triton-install/main/get.sh | sudo bash -s -- --license-file /path/to/license.lic
+```
+
+For air-gapped deployments without host binding the `.lic` file is portable, but anyone who
 obtains the file can run a second instance. Host binding removes that risk.
 
 ## Requirements
