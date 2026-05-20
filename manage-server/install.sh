@@ -135,3 +135,16 @@ info "  1. Open http://localhost:${HOST_PORT} (or your public URL)"
 info "  2. Complete the setup wizard"
 info "  3. Configure TLS via reverse proxy (see docs)"
 info ""
+
+# ── display machine-id for host-bound licence generation ─────────────────────
+if [[ -f /etc/machine-id ]]; then
+    RAW_ID="$(cat /etc/machine-id | tr -d '[:space:]')"
+    MACHINE_ID_HASH="$(echo -n "$RAW_ID" | sha3sum -a 256 2>/dev/null | awk '{print $1}' || \
+                       python3 -c "import hashlib,sys; print(hashlib.sha3_256(sys.stdin.buffer.read()).hexdigest())" <<< "$RAW_ID" 2>/dev/null || echo '')"
+    if [[ -n "$MACHINE_ID_HASH" ]]; then
+        info "── Host Machine ID ──────────────────────────────────────────────────────"
+        info "  Provide this value to your vendor when requesting a host-bound .lic file."
+        info "  Machine ID (SHA-3-256): $MACHINE_ID_HASH"
+        info "────────────────────────────────────────────────────────────────────────"
+    fi
+fi

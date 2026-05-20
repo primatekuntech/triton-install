@@ -71,6 +71,24 @@ Also delete all data (irreversible):
 curl -fsSL https://raw.githubusercontent.com/primatekuntech/triton-install/main/get.sh | sudo bash -s -- --uninstall --purge-data
 ```
 
+## Host-bound licences (optional)
+
+Your vendor can issue an offline `.lic` file that is cryptographically bound to a specific host
+so it cannot be installed on any other machine.
+
+**To get a host-bound licence:**
+
+1. Run `install.sh` on the target server — the output prints a **Machine ID** line:
+   ```
+   [manage-server] Machine ID (SHA-3-256): <64-hex-chars>
+   ```
+2. Share that value with your vendor when requesting the `.lic` file.
+3. The vendor enters it in the License Portal when generating the offline token.
+4. Install as usual — the Manage Server verifies the binding at every startup.
+
+For air-gapped deployments without host binding the `.lic` file is portable but anyone who
+obtains the file can run a second instance. Host binding removes that risk.
+
 ## Requirements
 
 - Linux (amd64 or arm64) or macOS
