@@ -75,7 +75,7 @@ if [[ ! -f "$ENV_FILE" ]]; then
 
     [[ -n "$GATEWAY_HOST" ]] && sed -i "s|^TRITON_MANAGE_GATEWAY_HOSTNAME=.*|TRITON_MANAGE_GATEWAY_HOSTNAME=$GATEWAY_HOST|" "$ENV_FILE"
     [[ -n "$HOST_IP"      ]] && sed -i "s|^TRITON_MANAGE_HOST_IP=.*|TRITON_MANAGE_HOST_IP=$HOST_IP|"                       "$ENV_FILE"
-    [[ -n "$IMAGE"        ]] && sed -i "s|^TRITON_MANAGE_IMAGE=.*|TRITON_MANAGE_IMAGE=$IMAGE|"                             "$ENV_FILE"
+    [[ -n "$IMAGE"        ]] && printf '\nTRITON_MANAGE_IMAGE=%s\n' "$IMAGE" >> "$ENV_FILE"
 
     info ".env created at $ENV_FILE"
     info "  back this up — it contains the JWT signing key, worker key, and vault key"
