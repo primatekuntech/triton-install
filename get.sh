@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 # get.sh — One-line bootstrapper for Triton Manage Server.
 #
-# Downloads the installer to /opt/triton-manage-server (Linux) or
-# ~/.local/share/triton-manage-server (macOS), installs Podman if needed,
+# Downloads the installer to /opt/triton-manageserver (Linux) or
+# ~/.local/share/triton-manageserver (macOS), installs Podman if needed,
 # then hands off to install.sh.
 #
 # Usage:
@@ -18,7 +18,7 @@
 #
 # Upgrade to a specific image tag:
 #   curl -fsSL https://raw.githubusercontent.com/primatekuntech/triton-install/main/get.sh \
-#     | sudo bash -s -- --upgrade --image ghcr.io/primatekuntech/triton-manage-server:1.2.0
+#     | sudo bash -s -- --upgrade --image ghcr.io/primatekuntech/triton-manageserver:1.2.0
 #
 # Uninstall (stop containers, keep data):
 #   curl -fsSL https://raw.githubusercontent.com/primatekuntech/triton-install/main/get.sh \
@@ -63,9 +63,9 @@ esac
 
 # ── install directory ─────────────────────────────────────────────────────
 if [[ "$PLATFORM" == "linux" ]]; then
-    INSTALL_DIR="/opt/triton-manage-server"
+    INSTALL_DIR="/opt/triton-manageserver"
 else
-    INSTALL_DIR="${HOME}/.local/share/triton-manage-server"
+    INSTALL_DIR="${HOME}/.local/share/triton-manageserver"
 fi
 
 # ── uninstall shortcut ────────────────────────────────────────────────────
