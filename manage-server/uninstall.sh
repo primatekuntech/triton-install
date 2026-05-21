@@ -1,17 +1,12 @@
 #!/usr/bin/env bash
 # uninstall.sh — stop and remove Manage Server containers.
 #
-# By default, KEEPS the PostgreSQL volume (scan history, hosts, users)
-# and the installer directory (preserves .env secrets for reinstall).
-# Pass --purge-data to delete volumes + installer directory — irreversible.
-#
-# Supported: Linux (amd64/arm64), macOS (Intel/Apple Silicon).
-# For Windows use uninstall.ps1 instead.
+# By default, KEEPS the PostgreSQL volume (scan history, hosts, users).
+# Pass --purge-data to delete the volumes as well — irreversible.
 #
 # Usage:
-#   Linux:  sudo bash uninstall.sh             # stop + remove containers, keep DB + .env
-#   Linux:  sudo bash uninstall.sh --purge-data  # also delete DB, volumes, and installer dir
-#   macOS:  bash uninstall.sh [--purge-data]
+#   sudo bash uninstall.sh             # stop + remove containers, keep DB
+#   sudo bash uninstall.sh --purge-data  # also delete DB + binaries volume
 set -euo pipefail
 
 SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" &>/dev/null && pwd)"
@@ -20,10 +15,7 @@ cd "$SCRIPT_DIR"
 info() { printf '[manage-server] %s\n' "$*"; }
 die()  { printf '[manage-server] error: %s\n' "$*" >&2; exit 1; }
 
-OS=$(uname -s)
-
-# Docker/Podman Desktop on macOS runs rootless; only Linux needs root.
-[[ "$OS" != "Linux" || $EUID -eq 0 ]] || die "must run as root (on Linux use: sudo bash uninstall.sh)"
+[[ $EUID -eq 0 ]] || die "must run as root"
 
 PURGE=0
 while [[ $# -gt 0 ]]; do
@@ -34,9 +26,9 @@ while [[ $# -gt 0 ]]; do
     esac
 done
 
-if command -v podman-compose >/dev/null 2>&1; then COMPOSE=(podman-compose); RUNTIME=podman
-elif podman compose version >/dev/null 2>&1; then  COMPOSE=(podman compose); RUNTIME=podman
-elif docker compose version >/dev/null 2>&1; then  COMPOSE=(docker compose); RUNTIME=docker
+if command -v podman-compose >/dev/null 2>&1; then COMPOSE=(podman-compose)
+elif podman compose version >/dev/null 2>&1; then  COMPOSE=(podman compose)
+elif docker compose version >/dev/null 2>&1; then  COMPOSE=(docker compose)
 else die "no compose runtime found"; fi
 
 if [[ -f .env ]]; then
@@ -44,22 +36,23 @@ if [[ -f .env ]]; then
     "${COMPOSE[@]}" --env-file .env down
 else
     info ".env not found, attempting raw container cleanup..."
-    "$RUNTIME" rm -f triton-manageserver triton-manage-db 2>/dev/null || true
+    podman rm -f triton-manageserver triton-manage-db 2>/dev/null || true
 fi
 
 if [[ $PURGE -eq 1 ]]; then
     info "DESTRUCTIVE: removing manage server volumes..."
     info "  this deletes: scan history, hosts, users, worker binaries"
+    read -r -p "  Are you sure? Type 'yes' to confirm: " CONFIRM
+    [[ "$CONFIRM" == "yes" ]] || die "aborted"
     for vol in triton-manage-db-data triton-manage-bins; do
-        "$RUNTIME" volume rm -f "$vol" 2>/dev/null || true
+        podman volume rm -f "$vol" 2>/dev/null \
+            || docker volume rm -f "$vol" 2>/dev/null \
+            || true
     done
     info "  volumes removed"
-    info "  removing installer directory $SCRIPT_DIR..."
-    rm -rf "$SCRIPT_DIR"
-    info "  installer directory removed"
+    info "  .env still on disk at $SCRIPT_DIR/.env — delete manually if desired"
 else
     info "DB + bins volumes retained (run with --purge-data to delete)"
-    info ".env preserved at $SCRIPT_DIR/.env — secrets reused on reinstall"
 fi
 
 info "uninstall complete"

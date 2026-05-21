@@ -4,12 +4,8 @@
 # Idempotent. Generates secrets on first run, reuses .env afterwards.
 # Container-based via Podman or Docker (auto-detected).
 #
-# Supported: Linux (amd64/arm64), macOS (Intel/Apple Silicon).
-# For Windows use install.ps1 instead.
-#
 # Usage:
-#   Linux:  sudo bash install.sh
-#   macOS:  bash install.sh
+#   sudo bash install.sh
 #
 # Flags (all optional):
 #   --gateway-hostname HOST         Agent mTLS hostname (defaults to current FQDN).
@@ -23,14 +19,6 @@ cd "$SCRIPT_DIR"
 
 info() { printf '[manage-server] %s\n' "$*"; }
 die()  { printf '[manage-server] error: %s\n' "$*" >&2; exit 1; }
-
-# Portable in-place sed: BSD sed (macOS) requires an explicit empty backup suffix.
-OS=$(uname -s)
-if [[ "$OS" == "Darwin" ]]; then
-    sed_inplace() { sed -i '' "$@"; }
-else
-    sed_inplace() { sed -i "$@"; }
-fi
 
 # ── arg parsing ──────────────────────────────────────────────────────────
 GATEWAY_HOST=""
@@ -48,17 +36,7 @@ while [[ $# -gt 0 ]]; do
     esac
 done
 
-# Docker/Podman Desktop on macOS runs rootless; only Linux needs root.
-[[ "$OS" != "Linux" || $EUID -eq 0 ]] || die "must run as root (on Linux use: sudo bash install.sh)"
-
-# ── architecture detection ───────────────────────────────────────────────
-case "$(uname -m)" in
-    x86_64)        ARCH=amd64 ;;
-    aarch64|arm64) ARCH=arm64 ;;   # aarch64 = Linux, arm64 = macOS Apple Silicon
-    *) die "unsupported architecture: $(uname -m) (supported: x86_64, aarch64, arm64)" ;;
-esac
-OS_LABEL=$(echo "$OS" | tr '[:upper:]' '[:lower:]')
-info "architecture: ${OS_LABEL}/$ARCH"
+[[ $EUID -eq 0 ]] || die "must run as root"
 
 # ── runtime detection ────────────────────────────────────────────────────
 if command -v podman-compose >/dev/null 2>&1; then
@@ -71,7 +49,7 @@ elif docker compose version >/dev/null 2>&1; then
     COMPOSE=(docker compose)
     RUNTIME=docker
 else
-    die "no compose runtime found. Install Docker Desktop or podman-compose."
+    die "no compose runtime found. Install podman-compose or docker compose."
 fi
 info "using runtime: $RUNTIME"
 
@@ -87,7 +65,7 @@ if [[ ! -f "$ENV_FILE" ]]; then
     WORKER_KEY=$(openssl rand -hex 16)
     VAULT_KEY=$(openssl rand -hex 32)
 
-    sed_inplace \
+    sed -i \
         -e "s|^POSTGRES_PASSWORD=.*|POSTGRES_PASSWORD=$PG_PASS|" \
         -e "s|^TRITON_MANAGE_JWT_SIGNING_KEY=.*|TRITON_MANAGE_JWT_SIGNING_KEY=$JWT_KEY|" \
         -e "s|^TRITON_MANAGE_WORKER_KEY=.*|TRITON_MANAGE_WORKER_KEY=$WORKER_KEY|" \
@@ -95,10 +73,9 @@ if [[ ! -f "$ENV_FILE" ]]; then
         "$ENV_FILE"
     info "vault key generated (PostgreSQL AES-256-GCM)"
 
-    [[ -n "$GATEWAY_HOST" ]] && sed_inplace "s|^TRITON_MANAGE_GATEWAY_HOSTNAME=.*|TRITON_MANAGE_GATEWAY_HOSTNAME=$GATEWAY_HOST|" "$ENV_FILE"
-    [[ -n "$HOST_IP"      ]] && sed_inplace "s|^TRITON_MANAGE_HOST_IP=.*|TRITON_MANAGE_HOST_IP=$HOST_IP|"                       "$ENV_FILE"
-    # IMAGE has no placeholder line in env.template — append it directly.
-    [[ -n "$IMAGE"        ]] && printf '\nTRITON_MANAGE_IMAGE=%s\n' "$IMAGE" >> "$ENV_FILE"
+    [[ -n "$GATEWAY_HOST" ]] && sed -i "s|^TRITON_MANAGE_GATEWAY_HOSTNAME=.*|TRITON_MANAGE_GATEWAY_HOSTNAME=$GATEWAY_HOST|" "$ENV_FILE"
+    [[ -n "$HOST_IP"      ]] && sed -i "s|^TRITON_MANAGE_HOST_IP=.*|TRITON_MANAGE_HOST_IP=$HOST_IP|"                       "$ENV_FILE"
+    [[ -n "$IMAGE"        ]] && sed -i "s|^TRITON_MANAGE_IMAGE=.*|TRITON_MANAGE_IMAGE=$IMAGE|"                             "$ENV_FILE"
 
     info ".env created at $ENV_FILE"
     info "  back this up — it contains the JWT signing key, worker key, and vault key"
