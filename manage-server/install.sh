@@ -38,6 +38,14 @@ done
 
 [[ $EUID -eq 0 ]] || die "must run as root"
 
+# ── architecture detection ───────────────────────────────────────────────
+case "$(uname -m)" in
+    x86_64)  ARCH=amd64 ;;
+    aarch64) ARCH=arm64 ;;
+    *) die "unsupported architecture: $(uname -m) (supported: x86_64, aarch64)" ;;
+esac
+info "architecture: linux/$ARCH"
+
 # ── runtime detection ────────────────────────────────────────────────────
 if command -v podman-compose >/dev/null 2>&1; then
     COMPOSE=(podman-compose)
