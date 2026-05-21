@@ -9,7 +9,7 @@
 #   sudo bash uninstall.sh --purge-data          # also delete DB + binaries volume (interactive)
 #   sudo bash uninstall.sh --purge-data --yes    # non-interactive purge (e.g. curl | bash)
 #   --version                                    Print script version and exit.
-SCRIPT_VERSION="2026-05-21.5"
+SCRIPT_VERSION="2026-05-21.6"
 set -euo pipefail
 
 SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" &>/dev/null && pwd)"
@@ -51,11 +51,11 @@ fi
 if [[ $PURGE -eq 1 ]]; then
     info "DESTRUCTIVE: removing manage server volumes..."
     info "  this deletes: scan history, hosts, users, worker binaries"
-    if [[ $YES -eq 0 ]]; then
+    if [[ $YES -eq 1 || ! -t 0 ]]; then
+        info "  non-interactive mode, proceeding automatically"
+    else
         read -r -p "  Are you sure? Type 'yes' to confirm: " CONFIRM
         [[ "$CONFIRM" == "yes" ]] || die "aborted"
-    else
-        info "  --yes flag set, skipping confirmation"
     fi
     for vol in triton-manage-db-data triton-manage-bins; do
         podman volume rm -f "$vol" 2>/dev/null \
