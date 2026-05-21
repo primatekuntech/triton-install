@@ -11,7 +11,11 @@
 #   --gateway-hostname HOST         Agent mTLS hostname (defaults to current FQDN).
 #   --manage-host-ip IP             Host LAN IP — used for "+ This machine".
 #   --image TAG                     Pin a specific manage-server image tag.
+#   --license-pubkey HEX            Hex-encoded Ed25519 public key from the licence server.
+#                                   Required when not baked into the image at build time.
 #   --no-tls                        Skip the TLS-required sanity check (dev).
+#   --version                       Print script version and exit.
+SCRIPT_VERSION="2026-05-21.4"
 set -euo pipefail
 
 SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" &>/dev/null && pwd)"
@@ -20,17 +24,22 @@ cd "$SCRIPT_DIR"
 info() { printf '[manage-server] %s\n' "$*"; }
 die()  { printf '[manage-server] error: %s\n' "$*" >&2; exit 1; }
 
+info "install.sh version $SCRIPT_VERSION"
+
 # ── arg parsing ──────────────────────────────────────────────────────────
 GATEWAY_HOST=""
 HOST_IP=""
 IMAGE=""
+LICENSE_PUBKEY=""
 NO_TLS=0
 while [[ $# -gt 0 ]]; do
     case "$1" in
-        --gateway-hostname) GATEWAY_HOST="$2"; shift 2 ;;
-        --manage-host-ip)   HOST_IP="$2";      shift 2 ;;
-        --image)            IMAGE="$2";        shift 2 ;;
-        --no-tls)           NO_TLS=1;          shift ;;
+        --gateway-hostname) GATEWAY_HOST="$2";    shift 2 ;;
+        --manage-host-ip)   HOST_IP="$2";         shift 2 ;;
+        --image)            IMAGE="$2";           shift 2 ;;
+        --license-pubkey)   LICENSE_PUBKEY="$2";  shift 2 ;;
+        --no-tls)           NO_TLS=1;             shift ;;
+        --version) echo "install.sh version $SCRIPT_VERSION"; exit 0 ;;
         -h|--help) grep '^#' "$0" | sed 's/^# //;s/^#//'; exit 0 ;;
         *) die "unknown flag: $1 (try --help)" ;;
     esac
@@ -73,9 +82,10 @@ if [[ ! -f "$ENV_FILE" ]]; then
         "$ENV_FILE"
     info "vault key generated (PostgreSQL AES-256-GCM)"
 
-    [[ -n "$GATEWAY_HOST" ]] && sed -i "s|^TRITON_MANAGE_GATEWAY_HOSTNAME=.*|TRITON_MANAGE_GATEWAY_HOSTNAME=$GATEWAY_HOST|" "$ENV_FILE"
-    [[ -n "$HOST_IP"      ]] && sed -i "s|^TRITON_MANAGE_HOST_IP=.*|TRITON_MANAGE_HOST_IP=$HOST_IP|"                       "$ENV_FILE"
-    [[ -n "$IMAGE"        ]] && sed -i "s|^TRITON_MANAGE_IMAGE=.*|TRITON_MANAGE_IMAGE=$IMAGE|"                             "$ENV_FILE"
+    [[ -n "$GATEWAY_HOST"   ]] && sed -i "s|^TRITON_MANAGE_GATEWAY_HOSTNAME=.*|TRITON_MANAGE_GATEWAY_HOSTNAME=$GATEWAY_HOST|"             "$ENV_FILE"
+    [[ -n "$HOST_IP"        ]] && sed -i "s|^TRITON_MANAGE_HOST_IP=.*|TRITON_MANAGE_HOST_IP=$HOST_IP|"                                   "$ENV_FILE"
+    [[ -n "$IMAGE"          ]] && sed -i "s|^TRITON_MANAGE_IMAGE=.*|TRITON_MANAGE_IMAGE=$IMAGE|"                                         "$ENV_FILE"
+    [[ -n "$LICENSE_PUBKEY" ]] && sed -i "s|^TRITON_MANAGE_LICENSE_SERVER_PUBKEY=.*|TRITON_MANAGE_LICENSE_SERVER_PUBKEY=$LICENSE_PUBKEY|" "$ENV_FILE"
 
     info ".env created at $ENV_FILE"
     info "  back this up — it contains the JWT signing key, worker key, and vault key"
@@ -83,9 +93,13 @@ else
     info "reusing existing .env at $ENV_FILE"
 fi
 
+# ── pull ─────────────────────────────────────────────────────────────────
+info "pulling latest image from registry..."
+"${COMPOSE[@]}" --env-file "$ENV_FILE" pull manage-server
+
 # ── start ────────────────────────────────────────────────────────────────
 info "starting containers..."
-"${COMPOSE[@]}" --env-file "$ENV_FILE" up -d
+"${COMPOSE[@]}" --env-file "$ENV_FILE" up -d --force-recreate
 
 # ── wait for health ──────────────────────────────────────────────────────
 HOST_PORT=$(grep -E '^TRITON_MANAGE_HOST_PORT=' "$ENV_FILE" | cut -d= -f2)
