@@ -1,12 +1,13 @@
 #!/usr/bin/env bash
 # uninstall.sh — stop and remove Manage Server containers.
 #
-# By default, KEEPS the PostgreSQL volume (scan history, hosts, users).
-# Pass --purge-data to delete the volumes as well — irreversible.
+# By default, KEEPS the PostgreSQL volume (scan history, hosts, users)
+# and the installer directory (preserves .env secrets for reinstall).
+# Pass --purge-data to delete volumes + installer directory — irreversible.
 #
 # Usage:
-#   sudo bash uninstall.sh             # stop + remove containers, keep DB
-#   sudo bash uninstall.sh --purge-data  # also delete DB + binaries volume
+#   sudo bash uninstall.sh             # stop + remove containers, keep DB + .env
+#   sudo bash uninstall.sh --purge-data  # also delete DB, volumes, and /opt/triton-manage-server
 set -euo pipefail
 
 SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" &>/dev/null && pwd)"
@@ -48,9 +49,12 @@ if [[ $PURGE -eq 1 ]]; then
             || true
     done
     info "  volumes removed"
-    info "  .env still on disk at $SCRIPT_DIR/.env — delete manually if desired"
+    info "  removing installer directory $SCRIPT_DIR..."
+    rm -rf "$SCRIPT_DIR"
+    info "  installer directory removed"
 else
     info "DB + bins volumes retained (run with --purge-data to delete)"
+    info ".env preserved at $SCRIPT_DIR/.env — secrets reused on reinstall"
 fi
 
 info "uninstall complete"
