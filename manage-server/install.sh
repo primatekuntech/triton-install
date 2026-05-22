@@ -15,7 +15,7 @@
 #                                   Required when not baked into the image at build time.
 #   --no-tls                        Skip the TLS-required sanity check (dev).
 #   --version                       Print script version and exit.
-SCRIPT_VERSION="2026-05-21.4"
+SCRIPT_VERSION="2026-05-22.1"
 set -euo pipefail
 
 SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" &>/dev/null && pwd)"
@@ -46,6 +46,34 @@ while [[ $# -gt 0 ]]; do
 done
 
 [[ $EUID -eq 0 ]] || die "must run as root"
+
+# ── machine-id ───────────────────────────────────────────────────────────
+# /etc/machine-id is used for offline licence host binding.
+# Ensure it exists; generate one if this is a fresh host.
+MACHINE_ID_HASH=""
+if [[ "$(uname -s)" == "Linux" ]]; then
+    if [[ ! -s /etc/machine-id ]]; then
+        info "generating /etc/machine-id..."
+        if command -v systemd-machine-id-setup >/dev/null 2>&1; then
+            systemd-machine-id-setup
+        else
+            printf '%032x\n' "$(od -An -N16 -tx1 /dev/urandom | tr -d ' \n')" 2>/dev/null \
+                || head -c 16 /dev/urandom | od -An -tx1 | tr -d ' \n' | cut -c1-32 > /etc/machine-id
+            chmod 444 /etc/machine-id
+        fi
+        info "/etc/machine-id created"
+    fi
+    if command -v python3 >/dev/null 2>&1; then
+        MACHINE_ID_HASH=$(python3 -c "
+import hashlib, sys
+try:
+    data = open('/etc/machine-id').read().strip()
+    print(hashlib.sha3_256(data.encode()).hexdigest())
+except Exception as e:
+    sys.exit(0)
+" 2>/dev/null || true)
+    fi
+fi
 
 # ── runtime detection ────────────────────────────────────────────────────
 if command -v podman-compose >/dev/null 2>&1; then
@@ -125,3 +153,10 @@ info "       - Enter your Triton licence server URL and licence ID"
 info "       - Or upload an air-gap licence file"
 info "  3. Configure TLS via reverse proxy (see docs)"
 info ""
+if [[ -n "$MACHINE_ID_HASH" ]]; then
+    info "Machine ID (for offline / air-gap licence binding):"
+    info "  Raw:  $(cat /etc/machine-id 2>/dev/null | tr -d '[:space:]')"
+    info "  Hash: $MACHINE_ID_HASH"
+    info "  Share the Hash with your licence vendor to bind the licence to this host."
+    info ""
+fi
